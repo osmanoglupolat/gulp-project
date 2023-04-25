@@ -1,9 +1,9 @@
-# frontend-gulp
-Bu front-end işlerinize gulp ile başlamanız için bir başlangıç paketidir.
+# Gulp Project
+Projelerinize temiz bir başlangıç için kullanılan gulp paketidir.
 
 # Kurulum
 Repoyu uygun bir yere klonlayın.
-```
+
 Daha sonra paketleri kurun.
 ```
 yarn add
