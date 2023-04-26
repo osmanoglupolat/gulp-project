@@ -1,68 +1,100 @@
-import gulp from "gulp";
-import browserSync from "browser-sync";
+'use strict';
+
+import gulp from 'gulp';
+import browserSync from 'browser-sync';
 import sassLoader from 'sass';
 import gulpSass from 'gulp-sass';
-import minifyCSS from 'gulp-csso';
-import minifyImg from 'gulp-imagemin';
-import minifyJS from 'gulp-uglify';
-import concat from 'gulp-concat';
 import autoprefixer from 'gulp-autoprefixer';
+import uglify from 'gulp-uglify';
 import { deleteAsync as del } from 'del';
 
+browserSync.create();
 const sass = gulpSass(sassLoader);
+const { src, dest, lastRun, series, parallel, watch, task } = gulp;
 
-gulp.task('browser-sync', () => {
+function clean(done) {
+    return del(['dist']);
+    done();
+}
+
+function html(done) {
+    return src(['src/*.html'], { since: lastRun(html) })
+        .pipe(dest('dist/'));
+    done();
+}
+
+function css(done) {
+    return (
+        src(['src/scss/*.scss'])
+            //.pipe(sourcemaps.init())
+            .pipe(
+                sass({
+                    outputStyle: 'compressed',
+                })
+            )
+            .pipe(
+                autoprefixer({
+                    cascade: false,
+                    grid: false,
+                })
+            )
+            //.pipe(sourcemaps.write('.'))
+            .pipe(dest('dist/css'))
+            .pipe(browserSync.stream())
+    );
+    done();
+}
+
+function js(done) {
+    return (
+        src(['src/js/*.js'])
+            //.pipe(sourcemaps.init())
+            .pipe(uglify())
+            //.pipe(concat('all.js'))
+            //.pipe(sourcemaps.write('.'))
+            .pipe(dest('dist/js'))
+    );
+    done();
+}
+
+function jsExt(done) {
+    return src(['src/js/ext/**']).pipe(dest('dist/js/ext'));
+    done();
+}
+
+function images(done) {
+    return src(['src/img/**']).pipe(dest('dist/img'));
+    done();
+}
+
+function reload(done) {
+    browserSync.reload();
+    done();
+}
+
+function host(done) {
     browserSync.init({
         server: {
-            baseDir: "dist"
-        }
+            baseDir: 'dist',
+        },
     });
-});
+    done();
+}
 
-gulp.task('css', () => {
-    return gulp.src('src/scss/**/*.scss')
-        .pipe(sass({
-            outputStyle: 'compressed',
-            precision: 10,
-            includePaths: ['.']
-        }).on('error', sass.logError))
-        .pipe(minifyCSS())
-        .pipe(autoprefixer())
-        .pipe(concat('app.min.css'))
-        .pipe(gulp.dest('dist/css'))
-        .pipe(browserSync.stream());
-});
+function watchFiles(done) {
+    watch('src/**/*.html', series(html, reload));
+    watch('src/scss/**/*.scss', series(css));
+    watch('src/js/**', series(js, jsExt, reload));
+    watch('src/img/**', series(images, reload));
+    done();
+}
 
-gulp.task('js', () => {
-    return gulp.src('src/js/**/*.js')
-        .pipe(concat('app.min.js'))
-        .pipe(minifyJS())
-        .pipe(gulp.dest('dist/js'))
-        .pipe(browserSync.stream());
-});
+const _default = series(
+    clean,
+    css,
+    parallel(html, js, jsExt, images),
+    host,
+    watchFiles
+);
 
-gulp.task('html', () => {
-    gulp.src('src/**/*.html')
-        .pipe(gulp.dest('dist'))
-        .pipe(browserSync.stream());
-});
-
-gulp.task('img', () => {
-    /*
-    Eğer resimleri minify etmek isterseniz yorum satırını kaldırabilirsiniz.
-    */
-    gulp.src('src/img/**/*')
-        // .pipe(minifyImg())
-        .pipe(gulp.dest('dist/img'));
-});
-
-gulp.task('delete', () => del(['dist/css', 'dist/js', 'dist/img', 'dist/**/*.html']));
-
-gulp.task('watch', () => {
-    gulp.watch("src/scss/**/*.scss", gulp.task('css'));
-    gulp.watch("src/js/**/*.js", gulp.task('js'));
-    gulp.watch("src/img/**/*.img", gulp.task('img'));
-    gulp.watch("src/**/*.html", gulp.task('html'));
-});
-
-gulp.task('default', gulp.series('delete', gulp.parallel('html', 'css', 'js', 'img', 'browser-sync', 'watch')));
+export { _default as default, clean, css, js };
