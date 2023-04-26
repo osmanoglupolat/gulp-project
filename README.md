@@ -10,5 +10,5 @@ yarn add
 ```
 Ve artık çalıştırmaya hazırsınız.
 ```
-yarn start
+yarn install
 ```
